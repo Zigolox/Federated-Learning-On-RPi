@@ -8,7 +8,7 @@ import torch
 
 import flwr as fl
 
-from . import mnist
+import mnist
 
 DATA_ROOT = "./data/mnist"
 

@@ -6,6 +6,6 @@ RUN apt install git -y
 RUN git clone --depth=1 https://github.com/Zigolox/Federated-Learning-On-RPi.git
 RUN pip install flwr==0.17.0
 RUN pip install importlib_metadata
-WORKDIR flower/src/
+WORKDIR Federated-Learning-On-RPi/src/
 
-CMD python -m flwr_example.quickstart_pytorch.client --cid=$CLIENT --server_address=127.0.0.1:8080 --nb_clients=2
+CMD python client.py --cid=$CLIENT --server_address=127.0.0.1:8080 --nb_clients=2

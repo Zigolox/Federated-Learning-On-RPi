@@ -313,6 +313,7 @@ class PytorchMNISTClient(fl.client.Client):
         device: torch.device = torch.device("cpu"),
     ) -> None:
         self.model = MNISTNet().to(device)
+        self.model.load_state_dict(checkpoint)
         self.cid = cid
         self.train_loader = train_loader
         self.test_loader = test_loader

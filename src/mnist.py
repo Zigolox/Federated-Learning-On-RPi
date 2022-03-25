@@ -5,7 +5,7 @@ This code is currently adapted from flwr. It will however be rewritten before us
 
 """PyTorch MNIST image classification.
 
-The code is generally adapted from PyTorch's Basic MNIST Example. 
+The code is generally adapted from PyTorch's Basic MNIST Example.
 The original code can be inspected in the official PyTorch github:
 
 https://github.com/pytorch/examples/blob/master/mnist/main.py
@@ -147,10 +147,10 @@ class MNISTNet(nn.Module):
 
     def __init__(self) -> None:
         super(MNISTNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, 5, 1)
-        self.conv2 = nn.Conv2d(16, 32, 5, 1)
-        self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
+        #self.conv1 = nn.Conv2d(1, 16, 5, 1)
+        #self.conv2 = nn.Conv2d(16, 32, 5, 1)
+        #self.dropout1 = nn.Dropout2d(0.25)
+        #self.dropout2 = nn.Dropout2d(0.5)
         self.fc1 = nn.Linear(3200, 64)
         self.fc2 = nn.Linear(64, 10)
 
@@ -170,13 +170,13 @@ class MNISTNet(nn.Module):
             The probability density of the output being from a specific class given the input.
 
         """
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
+        #x = self.conv1(x)
+        #x = F.relu(x)
+        #x = self.conv2(x)
+        #x = F.relu(x)
+        #x = F.max_pool2d(x, 2)
+        #x = self.dropout1(x)
+        #x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout2(x)

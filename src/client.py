@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train-batch-size",
         type=int,
-        default=512,
+        default=64,
         metavar="N",
         help="input batch size for training (default: 64)",
     )

@@ -8,7 +8,7 @@ import torch
 
 import flwr as fl
 
-import classifier
+import mnist
 
 DATA_ROOT = "./data/mnist"
 

@@ -59,7 +59,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load MNIST data
-    train_loader, test_loader = classifier.load_data( #TODO make sure load_data is replaced with new function
+    train_loader, test_loader = mnist.load_data( #TODO make sure load_data is replaced with new function
         data_root=DATA_ROOT,
         train_batch_size=args.train_batch_size,
         test_batch_size=args.test_batch_size,
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # pylint: enable=no-member
 
     # Instantiate client
-    client = classifier.PytorchMNISTClient(   #TODO make sure PytorchMNISTclient is replaced with new function
+    client = mnist.PytorchMNISTClient(   #TODO make sure PytorchMNISTclient is replaced with new function
         cid=args.cid,
         train_loader=train_loader,
         test_loader=test_loader,

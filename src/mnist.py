@@ -63,7 +63,7 @@ def dataset_partitioner(
 
     # Set the seed so we are sure to generate the same global batches
     # indices across all clients
-    np.random.seed(123)
+    np.random.seed(101)
 
     # Get the data corresponding to this client
     dataset_size = len(dataset)

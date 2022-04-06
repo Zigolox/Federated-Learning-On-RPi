@@ -63,7 +63,7 @@ def dataset_partitioner(
 
     # Set the seed so we are sure to generate the same global batches
     # indices across all clients
-    np.random.seed(101)
+    np.random.seed(123)
 
     # Get the data corresponding to this client
     dataset_size = len(dataset)
@@ -151,8 +151,8 @@ class MNISTNet(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.dropout1 = nn.Dropout2d(0.25)
         self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc1 = nn.Linear(9216, 32)
+        self.fc2 = nn.Linear(32, 10)
 
     # pylint: disable=arguments-differ,invalid-name
     def forward(self, x: Tensor) -> Tensor:

@@ -8,7 +8,7 @@ import torch
 
 import flwr as fl
 
-import mnist
+import classifier
 
 DATA_ROOT = "./data/mnist"
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train-batch-size",
         type=int,
-        default=64,
+        default=256,
         metavar="N",
         help="input batch size for training (default: 64)",
     )
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs",
         type=int,
-        default=14,
+        default=10,
         metavar="N",
         help="number of epochs to train (default: 14)",
     )
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load MNIST data
-    train_loader, test_loader = mnist.load_data( #TODO make sure load_data is replaced with new function
+    train_loader, test_loader = classifier.load_data( #TODO make sure load_data is replaced with new function
         data_root=DATA_ROOT,
         train_batch_size=args.train_batch_size,
         test_batch_size=args.test_batch_size,
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # pylint: enable=no-member
 
     # Instantiate client
-    client = mnist.PytorchMNISTClient(   #TODO make sure PytorchMNISTclient is replaced with new function
+    client = classifier.PytorchMNISTClient(   #TODO make sure PytorchMNISTclient is replaced with new function
         cid=args.cid,
         train_loader=train_loader,
         test_loader=test_loader,

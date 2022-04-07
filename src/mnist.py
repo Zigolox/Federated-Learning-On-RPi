@@ -67,7 +67,8 @@ def dataset_partitioner(
 
     # Get the data corresponding to this client
     dataset_size = len(dataset)
-    nb_samples_per_clients = dataset_size // number_of_clients
+    nb_samples_per_clients = (dataset_size) // number_of_clients
+    print((nb_samples_per_clients/2)//2)
     dataset_indices = list(range(dataset_size))
     np.random.shuffle(dataset_indices)
 
@@ -147,12 +148,14 @@ class MNISTNet(nn.Module):
 
     def __init__(self) -> None:
         super(MNISTNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, 3, 1)
-        self.conv2 = nn.Conv2d(16, 64, 3, 1)
-        self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(9216, 32)
-        self.fc2 = nn.Linear(32, 10)
+        #self.conv1 = nn.Conv2d(1, 8, 8, 1)
+        #self.conv2 = nn.Conv2d(8, 16, 8, 1)
+        self.dropout1 = nn.Dropout2d(0.06)
+        self.dropout2 = nn.Dropout2d(0.15)
+        self.dropout3 = nn.Dropout2d(0.15)
+        self.fc1 = nn.Linear(784, 16)
+        self.fc2 = nn.Linear(16, 10)
+        self.fc3 = nn.Linear(10, 6)
 
     # pylint: disable=arguments-differ,invalid-name
     def forward(self, x: Tensor) -> Tensor:
@@ -170,17 +173,20 @@ class MNISTNet(nn.Module):
             The probability density of the output being from a specific class given the input.
 
         """
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        #x = self.conv1(x)
+        #x = F.relu(x)
+        #x = self.conv2(x)
+        #x = F.relu(x)
+        #x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout2(x)
         x = self.fc2(x)
+        x = F.relu(x)
+        x = self.dropout3(x)
+        x = F.relu(x)
         output = F.log_softmax(x, dim=1)
         return output
 

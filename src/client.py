@@ -10,6 +10,8 @@ import flwr as fl
 
 import mnist
 
+import json
+
 DATA_ROOT = "./data/mnist"
 
 if __name__ == "__main__":
@@ -82,3 +84,17 @@ if __name__ == "__main__":
 
     # Start client
     fl.client.start_client(args.server_address, client)
+
+    print(
+        json.dumps(
+            [
+                i
+                for i in [
+                    mnist.total_test_accuracy,
+                    mnist.total_test_loss,
+                    mnist.total_train_loss,
+                ]
+            ]
+        ),
+        end="",
+    )

@@ -126,4 +126,4 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     print(results)
 
 
-simulation(2, 2, 0.5, 1)
+simulation(4, 10, 0.3, 2)

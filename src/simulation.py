@@ -4,7 +4,7 @@ from torchvision import datasets, transforms
 import numpy as np
 import torch
 import flwr as fl
-from multiprocessing import Process, Pipe
+from torch.multiprocessing import Process, Pipe, set_start_method
 import mnist
 import asyncio
 from flwr.server.strategy import FedAvg
@@ -59,17 +59,6 @@ def partitioner(data_root: str, partitions: int, iid: bool, batch_size: int):
     )
 
 
-async def run(func, args):
-
-    proc = await asyncio.create_subprocess_exec(
-        func, args, stdout=asyncio.subprocess.PIPE
-    )
-    stdout, _ = await proc.communicate()
-    print(stdout)
-    if "client" in func:
-        return json.loads(stdout.decode())
-
-
 def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
     """Start the server with a slightly adjusted FedAvg strategy."""
     strategy = FedAvg(min_available_clients=num_clients, fraction_fit=fraction_fit)
@@ -87,8 +76,6 @@ def start_client(data, epochs: int, send_end):
         epochs=epochs,
         device=device,
     )
-    send_end.send("2")
-
     # Start client
     fl.client.start_client("0.0.0.0:8080", client)
     send_end.send(1)
@@ -98,16 +85,22 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
 
     # This will hold all the processes which we are going to create
     processes = []
-
+    torch.set_num_threads(1)
+    # set_start_method("spawn", force=True)
     # Start the server
     server_process = Process(
         target=start_server, args=(num_rounds, num_clients, fraction_fit)
     )
     server_process.start()
     processes.append(server_process)
-    partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=True, batch_size=32)
-
+    partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=True, batch_size=64)
     pipe_list = []
+
+    # m = torch.nn.Linear(784, 32)
+    # for i, _ in partitions[0][0]:
+    #    i = torch.flatten(i.to("cpu"), 1)
+    #    output = m(i)
+    #    print(output.shape)
     for partition in partitions:
         recv_end, send_end = Pipe(False)
         client_process = Process(
@@ -117,8 +110,6 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
         client_process.start()
         processes.append(client_process)
     # server_process.start()
-    results = [i.recv() for i in pipe_list]
-    print(results)
     # Block until all processes are finished
     for p in processes:
         p.join()
@@ -126,4 +117,4 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     print(results)
 
 
-simulation(2, 2, 0.5, 1)
+simulation(5, 100, 0.5, 3)

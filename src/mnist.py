@@ -40,7 +40,7 @@ def dataset_partitioner(
     batch_size: int,
     client_id: int,
     number_of_clients: int,
-    iid: bool = False,
+    iid: bool = True,
 ) -> torch.utils.data.DataLoader:
     """Helper function to partition datasets
 
@@ -159,8 +159,8 @@ class MNISTNet(nn.Module):
 
     def __init__(self) -> None:
         super(MNISTNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        # self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        # self.conv2 = nn.Conv2d(32, 64, 3, 1)
         self.dropout1 = nn.Dropout2d(0.25)
         self.dropout2 = nn.Dropout2d(0.5)
         self.fc1 = nn.Linear(784, 32)
@@ -238,15 +238,12 @@ def train(
             # Grab mini-batch and transfer to device
             data, target = data.to(device), target.to(device)
             num_examples_train += len(data)
-
             # Zero gradients
             optimizer.zero_grad()
-
             output = model(data)
             loss = F.nll_loss(output, target, reduction="sum")
             loss.backward()
             optimizer.step()
-
             loss_epoch += loss.item()
             # if batch_idx % 10 == 8:
             #    print(
@@ -265,7 +262,6 @@ def train(
             #    )
         total_train_loss.append(loss_epoch / num_examples_train)
         scheduler.step()
-    assert False
     return num_examples_train
 
 

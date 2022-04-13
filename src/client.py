@@ -27,6 +27,7 @@ if __name__ == "__main__":
         "--cid",
         type=int,
         metavar="N",
+        default=0,
         help="ID of current client (default: 0)",
     )
     parser.add_argument(

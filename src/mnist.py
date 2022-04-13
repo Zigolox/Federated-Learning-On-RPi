@@ -265,7 +265,6 @@ def train(
             #    )
         total_train_loss.append(loss_epoch / num_examples_train)
         scheduler.step()
-    assert False
     return num_examples_train
 
 

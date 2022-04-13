@@ -96,11 +96,6 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=True, batch_size=64)
     pipe_list = []
 
-    # m = torch.nn.Linear(784, 32)
-    # for i, _ in partitions[0][0]:
-    #    i = torch.flatten(i.to("cpu"), 1)
-    #    output = m(i)
-    #    print(output.shape)
     for partition in partitions:
         recv_end, send_end = Pipe(False)
         client_process = Process(

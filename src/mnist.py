@@ -265,6 +265,7 @@ def train(
             #    )
         total_train_loss.append(loss_epoch / num_examples_train)
         scheduler.step()
+    assert False
     return num_examples_train
 
 
@@ -380,13 +381,10 @@ class PytorchMNISTClient(fl.client.Client):
         # Set the seed so we are sure to generate the same global batches
         # indices across all clients
         np.random.seed(123)
-
         weights: fl.common.Weights = fl.common.parameters_to_weights(ins.parameters)
         fit_begin = timeit.default_timer()
-
         # Set model parameters/weights
         self.set_weights(weights)
-
         # Train model
         num_examples_train: int = train(
             self.model,
@@ -395,7 +393,6 @@ class PytorchMNISTClient(fl.client.Client):
             device=self.device,
             cid=self.cid,
         )
-
         # Return the refined weights and the number of examples used for training
         weights_prime: fl.common.Weights = self.get_weights()
         params_prime = fl.common.weights_to_parameters(weights_prime)

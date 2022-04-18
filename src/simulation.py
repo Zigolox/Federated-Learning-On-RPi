@@ -62,45 +62,57 @@ def partitioner(data_root: str, partitions: int, iid: bool, batch_size: int):
     )
 
 
-def get_eval_fn(model: torch.nn.Module, args):
+def get_eval_fn(model: torch.nn.Module, device: torch.device):
     # Load MNIST data
-    (x_train, y_train), _ = mnist.load_data(
-        data_root=DATA_ROOT,
-        train_batch_size=args.train_batch_size,
-        test_batch_size=args.test_batch_size,
-        cid=args.cid,
-        nb_clients=args.nb_clients,
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
     )
-    max_ind = len(x_train)
-    x_val, y_val = x_train[max_ind-5000:max_ind], y_train[max_ind-5000:max_ind]
+
+    test_data = datasets.MNIST(DATA_ROOT, train=False, transform=transform)
+    test_loader = DataLoader(test_data, batch_size=1000)
 
     def evaluate(
         weights: fl.common.Weights,
-    ) -> typing.Optional[typing.Tuple[float, float]]:
-        model.set_weights(weights)  # Update model with the latest parameters
-        loss, accuracy = model.evaluate(x_val, y_val)
-        return loss, accuracy
+    ) -> typing.Optional[typing.Tuple[float, dict]]:
+
+        # Set weight
+        state_dict = OrderedDict(
+            {k: torch.tensor(v) for k, v in zip(model.state_dict().keys(), weights)}
+        )
+        model.load_state_dict(state_dict, strict=True)
+
+        _, loss, accuracy = mnist.test(model, test_loader, device)
+        return loss, {"accuracy": accuracy}
 
     return evaluate
 
-def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
+
+def start_server(
+    num_rounds: int,
+    num_clients: int,
+    fraction_fit: float,
+    device: torch.device,
+    send_server,
+):
     """Start the server with a slightly adjusted FedAvg strategy."""
 
     model = mnist.MNISTNet()
 
-    state_dict = OrderedDict(
-        {k: torch.tensor(v) for k, v in zip(model.state_dict().keys(), weights=None)}
+    strategy = FedAvg(
+        min_available_clients=num_clients,
+        fraction_fit=fraction_fit,
+        eval_fn=get_eval_fn(model, device),
     )
-    model.load_state_dict()
-    model.eval()
 
-    strategy = FedAvg(min_available_clients=num_clients, fraction_fit=fraction_fit, eval_fn=get_eval_fn(model))
     # Exposes the server by default on port 8080
-    fl.server.start_server(strategy=strategy, config={"num_rounds": num_rounds})
+    result = fl.server.start_server(
+        strategy=strategy, config={"num_rounds": num_rounds}
+    )
+    send_server.send(result)
 
 
-def start_client(data, epochs: int, send_end):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def start_client(data, epochs: int, device: torch.device):
     # Instantiate client
     client = mnist.PytorchMNISTClient(
         cid=0,
@@ -111,7 +123,6 @@ def start_client(data, epochs: int, send_end):
     )
     # Start client
     fl.client.start_client("0.0.0.0:8080", client)
-    send_end.send(1)
 
 
 def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: int):
@@ -119,30 +130,27 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     # This will hold all the processes which we are going to create
     processes = []
     torch.set_num_threads(1)
-    # set_start_method("spawn", force=True)
+    # Choose gpu if availeble
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Start the server
+    recv_server, send_server = Pipe(False)
     server_process = Process(
-        target=start_server, args=(num_rounds, num_clients, fraction_fit)
+        target=start_server,
+        args=(num_rounds, num_clients, fraction_fit, device, send_server),
     )
     server_process.start()
     processes.append(server_process)
     partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=True, batch_size=64)
-    pipe_list = []
 
     for partition in partitions:
-        recv_end, send_end = Pipe(False)
-        client_process = Process(
-            target=start_client, args=(partition, epochs, send_end)
-        )
-        pipe_list.append(recv_end)
+        client_process = Process(target=start_client, args=(partition, epochs, device))
         client_process.start()
         processes.append(client_process)
-    # server_process.start()
     # Block until all processes are finished
     for p in processes:
         p.join()
-    results = [i.recv() for i in pipe_list]
+    results = recv_server.recv()
     print(results)
 
 
-simulation(5, 100, 0.5, 3)
+simulation(5, 5, 0.5, 3)

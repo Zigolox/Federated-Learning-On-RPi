@@ -8,6 +8,9 @@ from torch.multiprocessing import Process, Pipe, set_start_method
 import mnist
 import asyncio
 from flwr.server.strategy import FedAvg
+import typing
+import flwr as fl
+from collections import OrderedDict
 
 DATA_ROOT = "./data/mnist"
 
@@ -59,9 +62,39 @@ def partitioner(data_root: str, partitions: int, iid: bool, batch_size: int):
     )
 
 
+def get_eval_fn(model: torch.nn.Module, args):
+    # Load MNIST data
+    (x_train, y_train), _ = mnist.load_data(
+        data_root=DATA_ROOT,
+        train_batch_size=args.train_batch_size,
+        test_batch_size=args.test_batch_size,
+        cid=args.cid,
+        nb_clients=args.nb_clients,
+    )
+    max_ind = len(x_train)
+    x_val, y_val = x_train[max_ind-5000:max_ind], y_train[max_ind-5000:max_ind]
+
+    def evaluate(
+        weights: fl.common.Weights,
+    ) -> typing.Optional[typing.Tuple[float, float]]:
+        model.set_weights(weights)  # Update model with the latest parameters
+        loss, accuracy = model.evaluate(x_val, y_val)
+        return loss, accuracy
+
+    return evaluate
+
 def start_server(num_rounds: int, num_clients: int, fraction_fit: float):
     """Start the server with a slightly adjusted FedAvg strategy."""
-    strategy = FedAvg(min_available_clients=num_clients, fraction_fit=fraction_fit)
+
+    model = mnist.MNISTNet()
+
+    state_dict = OrderedDict(
+        {k: torch.tensor(v) for k, v in zip(model.state_dict().keys(), weights=None)}
+    )
+    model.load_state_dict()
+    model.eval()
+
+    strategy = FedAvg(min_available_clients=num_clients, fraction_fit=fraction_fit, eval_fn=get_eval_fn(model))
     # Exposes the server by default on port 8080
     fl.server.start_server(strategy=strategy, config={"num_rounds": num_rounds})
 

@@ -29,7 +29,6 @@ def partitioner(data_root: str, partitions: int, iid: bool, batch_size: int):
                 dataset_indices += (
                     torch.nonzero(dataset.targets == label).flatten().tolist()
                 )
-
         # Get starting and ending indices w.r.t CLIENT_ID
         data_loaders = []
         for i in range(partitions):
@@ -125,7 +124,13 @@ def start_client(data, epochs: int, device: torch.device):
     fl.client.start_client("0.0.0.0:8080", client)
 
 
-def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: int):
+def simulation(
+    num_rounds: int,
+    num_clients: int,
+    fraction_fit: float,
+    epochs: int,
+    iid: bool = True,
+):
 
     # This will hold all the processes which we are going to create
     processes = []
@@ -140,7 +145,7 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     )
     server_process.start()
     processes.append(server_process)
-    partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=True, batch_size=64)
+    partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=iid, batch_size=64)
 
     for partition in partitions:
         client_process = Process(target=start_client, args=(partition, epochs, device))
@@ -150,7 +155,8 @@ def simulation(num_rounds: int, num_clients: int, fraction_fit: float, epochs: i
     for p in processes:
         p.join()
     results = recv_server.recv()
-    print(results)
+    return results
 
 
-simulation(5, 5, 0.5, 3)
+if __name__ == "__main__":
+    simulation(5, 10, 0.5, 3, False)

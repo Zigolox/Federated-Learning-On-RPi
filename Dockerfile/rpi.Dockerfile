@@ -1,3 +1,4 @@
+ARG BASE_IMAGE_TYPE=cpu
 FROM jafermarq/jetsonfederated_$BASE_IMAGE_TYPE:latest
 
 RUN apt update -y

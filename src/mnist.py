@@ -24,15 +24,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, optim
+from torch.optim import optimizer
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from torchvision import datasets, transforms
 
 import flwr as fl
-
-total_test_loss = []
-total_test_accuracy = []
-total_train_loss = []
 
 
 def dataset_partitioner(
@@ -229,6 +226,7 @@ def train(
     """
     model.train()
     optimizer = optim.Adadelta(model.parameters(), lr=1.0)
+    # optimizer = optim.Adam(model.parameters())
     scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
     # print(f"Training {epochs} epoch(s) w/ {len(train_loader)} mini-batches each")
     for epoch in range(epochs):  # loop over the dataset multiple times
@@ -260,7 +258,6 @@ def train(
             #        end="\r",
             #        flush=True,
             #    )
-        total_train_loss.append(loss_epoch / num_examples_train)
         scheduler.step()
     return num_examples_train
 
@@ -424,16 +421,10 @@ class PytorchMNISTClient(fl.client.Client):
             test_loss,
             accuracy,
         ) = test(self.model, self.test_loader, device=self.device)
-        total_test_accuracy.append(accuracy)
-        total_test_loss.append(test_loss)
-
-        # print(
-        #    f"Client {self.cid} - Evaluate on {num_examples_test} samples: Average loss: {test_loss:.4f}, Accuracy: {100*accuracy:.2f}%\n"
-        # )
-
         # Return the number of evaluation examples and the evaluation result (loss)
+        metrics = {"accuracy": float(accuracy)}
         return fl.common.EvaluateRes(
             loss=float(test_loss),
             num_examples=num_examples_test,
-            accuracy=float(accuracy),
+            metrics=metrics,
         )

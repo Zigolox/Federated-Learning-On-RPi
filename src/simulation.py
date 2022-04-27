@@ -92,18 +92,23 @@ def start_server(
     num_clients: int,
     fraction_fit: float,
     device: torch.device,
+    centralized_eval: bool,
     send_server,
 ):
     """Start the server with a slightly adjusted FedAvg strategy."""
 
     model = mnist.MNISTNet()
 
+    if centralized_eval:
+        eval_fn = get_eval_fn(model, device)
+    else:
+        eval_fn = None
     strategy = FedAvg(
         min_available_clients=num_clients,
         fraction_fit=fraction_fit,
-        eval_fn=get_eval_fn(model, device),
+        eval_fn=eval_fn,
+        fraction_eval=1,
     )
-
     # Exposes the server by default on port 8080
     result = fl.server.start_server(
         strategy=strategy, config={"num_rounds": num_rounds}
@@ -130,6 +135,7 @@ def simulation(
     fraction_fit: float,
     epochs: int,
     iid: bool = True,
+    centralized_eval: bool = True,
 ):
 
     # This will hold all the processes which we are going to create
@@ -141,7 +147,14 @@ def simulation(
     recv_server, send_server = Pipe(False)
     server_process = Process(
         target=start_server,
-        args=(num_rounds, num_clients, fraction_fit, device, send_server),
+        args=(
+            num_rounds,
+            num_clients,
+            fraction_fit,
+            device,
+            centralized_eval,
+            send_server,
+        ),
     )
     server_process.start()
     processes.append(server_process)
@@ -159,4 +172,4 @@ def simulation(
 
 
 if __name__ == "__main__":
-    simulation(5, 10, 0.5, 3, False)
+    simulation(5, 10, 0.5, 3, True, False)

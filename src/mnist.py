@@ -24,6 +24,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor, optim
+from torch.optim import optimizer
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from torchvision import datasets, transforms
@@ -36,6 +37,7 @@ def dataset_partitioner(
     batch_size: int,
     client_id: int,
     number_of_clients: int,
+    iid: bool = True,
 ) -> torch.utils.data.DataLoader:
     """Helper function to partition datasets
 
@@ -53,7 +55,8 @@ def dataset_partitioner(
     number_of_clients: int
         Total number of clients launched during training. This value dictates the number of partitions to be created.
 
-
+    iid: bool
+        If the data should be distributed randomly for each client
     Returns
     -------
     data_loader: torch.utils.data.Dataset
@@ -64,16 +67,23 @@ def dataset_partitioner(
     # Set the seed so we are sure to generate the same global batches
     # indices across all clients
     np.random.seed(123)
-
     # Get the data corresponding to this client
     dataset_size = len(dataset)
     nb_samples_per_clients = dataset_size // number_of_clients
-    dataset_indices = list(range(dataset_size))
-    np.random.shuffle(dataset_indices)
+    if iid:
+        dataset_indices = np.arange(dataset_size)
+        np.random.shuffle(dataset_indices)
+    else:
+        dataset_indices = []
+        for label in sorted(torch.unique(dataset.targets).tolist()):
+            dataset_indices += (
+                torch.nonzero(dataset.targets == label).flatten().tolist()
+            )
 
     # Get starting and ending indices w.r.t CLIENT_ID
     start_ind = client_id * nb_samples_per_clients
     end_ind = start_ind + nb_samples_per_clients
+
     data_sampler = SubsetRandomSampler(dataset_indices[start_ind:end_ind])
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=False, sampler=data_sampler
@@ -123,7 +133,6 @@ def load_data(
         data_root, train=True, download=True, transform=transform
     )
     test_dataset = datasets.MNIST(data_root, train=False, transform=transform)
-
     # Create partitioned datasets based on the total number of clients and client_id
     train_loader = dataset_partitioner(
         dataset=train_dataset,
@@ -147,12 +156,12 @@ class MNISTNet(nn.Module):
 
     def __init__(self) -> None:
         super(MNISTNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+        # self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        # self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.dropout1 = nn.Dropout(0.25)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(784, 32)
+        self.fc2 = nn.Linear(32, 10)
 
     # pylint: disable=arguments-differ,invalid-name
     def forward(self, x: Tensor) -> Tensor:
@@ -170,12 +179,12 @@ class MNISTNet(nn.Module):
             The probability density of the output being from a specific class given the input.
 
         """
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
+        #        x = self.conv1(x)
+        #        x = F.relu(x)
+        #        x = self.conv2(x)
+        #        x = F.relu(x)
+        #        x = F.max_pool2d(x, 2)
+        #        x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = F.relu(x)
@@ -190,6 +199,7 @@ def train(
     train_loader: torch.utils.data.DataLoader,
     epochs: int,
     device: torch.device = torch.device("cpu"),
+    cid=0,
 ) -> int:
     """Train routine based on 'Basic MNIST Example'
 
@@ -215,42 +225,39 @@ def train(
 
     """
     model.train()
-    optimizer = optim.Adadelta(model.parameters(), lr=1.0)
+    # optimizer = optim.Adadelta(model.parameters(), lr=1.0)
+    optimizer = optim.Adam(model.parameters())
     scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
-    print(f"Training {epochs} epoch(s) w/ {len(train_loader)} mini-batches each")
+    # print(f"Training {epochs} epoch(s) w/ {len(train_loader)} mini-batches each")
     for epoch in range(epochs):  # loop over the dataset multiple times
-        print()
         loss_epoch: float = 0.0
         num_examples_train: int = 0
         for batch_idx, (data, target) in enumerate(train_loader):
             # Grab mini-batch and transfer to device
             data, target = data.to(device), target.to(device)
             num_examples_train += len(data)
-
             # Zero gradients
             optimizer.zero_grad()
-
             output = model(data)
-            loss = F.nll_loss(output, target)
+            loss = F.nll_loss(output, target, reduction="sum")
             loss.backward()
             optimizer.step()
-
             loss_epoch += loss.item()
-            if batch_idx % 10 == 8:
-                print(
-                    "Train Epoch: {} [{}/{} ({:.0f}%)] Loss: {:.6f}\t\t\t\t".format(
-                        epoch,
-                        num_examples_train,
-                        len(train_loader) * train_loader.batch_size,
-                        100.0
-                        * num_examples_train
-                        / len(train_loader)
-                        / train_loader.batch_size,
-                        loss.item(),
-                    ),
-                    end="\r",
-                    flush=True,
-                )
+            # if batch_idx % 10 == 8:
+            #    print(
+            #        "Train Epoch: {} [{}/{} ({:.0f}%)] Loss: {:.6f}\t\t\t\t".format(
+            #            epoch,
+            #            num_examples_train,
+            #            len(train_loader) * train_loader.batch_size,
+            #            100.0
+            #            * num_examples_train
+            #            / len(train_loader)
+            #            / train_loader.batch_size,
+            #            loss.item(),
+            #        ),
+            #        end="\r",
+            #        flush=True,
+            #    )
         scheduler.step()
     return num_examples_train
 
@@ -367,18 +374,18 @@ class PytorchMNISTClient(fl.client.Client):
         # Set the seed so we are sure to generate the same global batches
         # indices across all clients
         np.random.seed(123)
-
         weights: fl.common.Weights = fl.common.parameters_to_weights(ins.parameters)
         fit_begin = timeit.default_timer()
-
         # Set model parameters/weights
         self.set_weights(weights)
-
         # Train model
         num_examples_train: int = train(
-            self.model, self.train_loader, epochs=self.epochs, device=self.device
+            self.model,
+            self.train_loader,
+            epochs=self.epochs,
+            device=self.device,
+            cid=self.cid,
         )
-
         # Return the refined weights and the number of examples used for training
         weights_prime: fl.common.Weights = self.get_weights()
         params_prime = fl.common.weights_to_parameters(weights_prime)
@@ -414,13 +421,10 @@ class PytorchMNISTClient(fl.client.Client):
             test_loss,
             accuracy,
         ) = test(self.model, self.test_loader, device=self.device)
-        print(
-            f"Client {self.cid} - Evaluate on {num_examples_test} samples: Average loss: {test_loss:.4f}, Accuracy: {100*accuracy:.2f}%\n"
-        )
-
         # Return the number of evaluation examples and the evaluation result (loss)
+        metrics = {"accuracy": float(accuracy)}
         return fl.common.EvaluateRes(
             loss=float(test_loss),
             num_examples=num_examples_test,
-            accuracy=float(accuracy),
+            metrics=metrics,
         )

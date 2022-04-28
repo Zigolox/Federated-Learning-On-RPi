@@ -3,7 +3,6 @@ This code is currently adapted from flwr. It will however be rewritten before us
 """
 from argparse import ArgumentParser
 
-import numpy as np
 import torch
 
 import flwr as fl
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs",
         type=int,
-        default=14,
+        default=3,
         metavar="N",
         help="number of epochs to train (default: 14)",
     )

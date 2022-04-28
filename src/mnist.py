@@ -225,8 +225,8 @@ def train(
 
     """
     model.train()
-    optimizer = optim.Adadelta(model.parameters(), lr=1.0)
-    # optimizer = optim.Adam(model.parameters())
+    # optimizer = optim.Adadelta(model.parameters(), lr=1.0)
+    optimizer = optim.Adam(model.parameters())
     scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
     # print(f"Training {epochs} epoch(s) w/ {len(train_loader)} mini-batches each")
     for epoch in range(epochs):  # loop over the dataset multiple times

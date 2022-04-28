@@ -9,4 +9,4 @@ RUN pip install flwr==0.17.0
 RUN pip install importlib_metadata
 WORKDIR Federated-Learning-On-RPi/src/
 
-CMD python client.py --cid=$CLIENT --server_address=127.0.0.1:8080 --nb_clients=2
+CMD python3 client.py --cid=$CLIENT --server_address=$SERVER_ADRESS --nb_clients=2

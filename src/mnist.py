@@ -255,7 +255,7 @@ def train(
             #            / train_loader.batch_size,
             #            loss.item(),
             #        ),
-            #        end="\r",
+	            #        end="\r",
             #        flush=True,
             #    )
         scheduler.step()

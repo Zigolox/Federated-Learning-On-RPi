@@ -135,9 +135,12 @@ def simulation(
     fraction_fit: float,
     epochs: int,
     iid: bool = True,
+    partitions: int = None,
     centralized_eval: bool = True,
 ):
 
+    if partitions == None:
+        partitions = num_clients
     # This will hold all the processes which we are going to create
     processes = []
     torch.set_num_threads(1)
@@ -158,10 +161,13 @@ def simulation(
     )
     server_process.start()
     processes.append(server_process)
-    partitions = partitioner(DATA_ROOT, partitions=num_clients, iid=iid, batch_size=64)
+    part = partitioner(DATA_ROOT, partitions=partitions, iid=iid, batch_size=64)
 
-    for partition in partitions:
-        client_process = Process(target=start_client, args=(partition, epochs, device))
+    for i in range(num_clients):
+        client_process = Process(
+            target=start_client,
+            args=(part[i * partitions // num_clients], epochs, device),
+        )
         client_process.start()
         processes.append(client_process)
     # Block until all processes are finished
